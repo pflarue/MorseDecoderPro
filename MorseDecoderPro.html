@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Professional Morse Code Decoder</title>
+	<style>
+		:root {
+			--primary-color: #1a73e8;
+			--secondary-color: #34a853;
+			--error-color: #ea4335;
+			--background-color: #f8f9fa;
+			--card-color: #ffffff;
+			--text-primary: #202124;
+			--text-secondary: #5f6368;
+		}
+
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			background-color: var(--background-color);
+			color: var(--text-primary);
+			margin: 0;
+			padding: 20px;
+			line-height: 1.6;
+		}
+
+		.container {
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 20px;
+		}
+
+		header {
+			text-align: center;
+			margin-bottom: 30px;
+		}
+
+		h1 {
+			color: var(--primary-color);
+			margin-bottom: 10px;
+		}
+
+		.card {
+			background-color: var(--card-color);
+			border-radius: 8px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			padding: 20px;
+			margin-bottom: 20px;
+		}
+
+		.card-title {
+			font-size: 18px;
+			font-weight: 600;
+			margin-bottom: 15px;
+			color: var(--primary-color);
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.controls {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 15px;
+			margin-bottom: 20px;
+		}
+
+		button {
+			background-color: var(--primary-color);
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 4px;
+			cursor: pointer;
+			font-weight: 500;
+			transition: background-color 0.2s;
+		}
+
+		button:hover {
+			background-color: #0d62d0;
+		}
+
+		button:disabled {
+			background-color: #a9c8f5;
+			cursor: not-allowed;
+		}
+
+		button.stop {
+			background-color: var(--error-color);
+		}
+
+		button.stop:hover {
+			background-color: #d32f2f;
+		}
+
+		.visualizers {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+			gap: 20px;
+			margin-bottom: 20px;
+		}
+
+		canvas {
+			width: 100%;
+			background-color: #f0f0f0;
+			border-radius: 4px;
+		}
+
+		.status-indicator {
+			display: flex;
+			align-items: center;
+			margin-bottom: 10px;
+		}
+
+		.status-dot {
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			margin-right: 8px;
+		}
+
+		.on {
+			background-color: var(--secondary-color);
+		}
+
+		.off {
+			background-color: var(--text-secondary);
+		}
+
+		.settings {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+			gap: 15px;
+			margin-bottom: 20px;
+		}
+
+		.setting-item {
+			margin-bottom: 15px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 5px;
+			font-weight: 500;
+			color: var(--text-secondary);
+		}
+
+		input[type="range"] {
+			width: 100%;
+		}
+
+		.value-display {
+			font-size: 14px;
+			color: var(--text-secondary);
+			text-align: right;
+			margin-top: 5px;
+		}
+
+		.output-container {
+			background-color: #f0f0f0;
+			border-radius: 4px;
+			padding: 15px;
+			min-height: 100px;
+			margin-bottom: 20px;
+			font-family: monospace;
+			white-space: pre-wrap;
+			overflow-y: auto;
+			max-height: 300px;
+			transition: background-color 0.1s;
+		}
+
+		.flash {
+			background-color: #e0f0ff;
+		}
+
+		.morse-buffer {
+			font-family: monospace;
+			font-size: 16px;
+			margin-top: 10px;
+			color: var(--text-secondary);
+		}
+
+		.signal-bar {
+			height: 20px;
+			background-color: #e0e0e0;
+			border-radius: 4px;
+			overflow: hidden;
+			margin-bottom: 10px;
+		}
+
+		.signal-level {
+			height: 100%;
+			background-color: var(--primary-color);
+			width: 0%;
+			transition: width 0.1s;
+		}
+
+		.threshold-marker {
+			position: relative;
+			height: 0;
+		}
+
+		.threshold-marker::before {
+			content: '';
+			position: absolute;
+			top: -20px;
+			height: 20px;
+			width: 2px;
+			background-color: var(--error-color);
+		}
+
+		.indicators {
+			display: flex;
+			gap: 15px;
+			margin-bottom: 15px;
+		}
+
+		.indicator {
+			flex: 1;
+			text-align: center;
+			padding: 10px;
+			background-color: #f0f0f0;
+			border-radius: 4px;
+		}
+
+		.indicator-value {
+			font-size: 24px;
+			font-weight: bold;
+			margin-bottom: 5px;
+		}
+
+		.indicator-label {
+			font-size: 12px;
+			color: var(--text-secondary);
+		}
+
+		.status-bar {
+			background-color: var(--primary-color);
+			color: white;
+			padding: 10px 15px;
+			border-radius: 4px;
+			margin-top: 20px;
+			display: flex;
+			justify-content: space-between;
+		}
+
+		/* Responsive adjustments */
+		@media (max-width: 768px) {
+			.visualizers {
+				grid-template-columns: 1fr;
+			}
+
+			.settings {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		.tone-indicator {
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			margin-left: 10px;
+			background-color: grey;
+		}
+
+		.tone-match {
+			background-color: var(--secondary-color);
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<header>
+			<h1>Professional Morse Code Decoder</h1>
+			<p>Decode Morse code from microphone input with adaptive speed (12-40 WPM) and frequency (500-900 Hz)</p>
+		</header>
+
+		<div class="card">
+			<div class="card-title">
+				<span>Control Panel</span>
+				<div class="status-dot off" id="statusDot"></div>
+				<span style="margin-left: auto; font-size: 12px; color: var(--text-secondary);">Auto-adaptive decoder</span>
+			</div>
+
+			<div class="controls">
+				<button id="startBtn">Start Decoding</button>
+				<button id="stopBtn" class="stop" disabled>Stop</button>
+				<button id="clearBtn">Clear Output</button>
+			</div>
+
+			<div class="settings">
+				<div class="setting-group">
+					<div class="setting-item">
+						<label for="toneFrequency">
+							Manual Target Frequency (Hz)
+							<span style="font-size: 11px; color: var(--text-secondary);">(Auto-adjusts during decoding)</span>
+						</label>
+						<input type="range" id="toneFrequency" min="500" max="900" step="10" value="700">
+						<div class="value-display"><span id="toneFrequencyValue">700</span> Hz</div>
+					</div>
+
+					<div class="setting-item">
+						<label for="wpmRange">
+							Manual Speed (WPM)
+							<span style="font-size: 11px; color: var(--text-secondary);">(Auto-adjusts during decoding)</span>
+						</label>
+						<input type="range" id="wpmRange" min="12" max="40" step="1" value="20">
+						<div class="value-display"><span id="wpmValue">20</span> WPM</div>
+					</div>
+				</div>
+
+				<div class="setting-group">
+					<div class="setting-item">
+						<label for="thresholdLevel">
+							Threshold Level
+							<span style="font-size: 11px; color: var(--text-secondary);">(Recommended: 0.10)</span>
+						</label>
+						<input type="range" id="thresholdLevel" min="0.05" max="0.5" step="0.01" value="0.10">
+						<div class="value-display"><span id="thresholdValue">0.10</span></div>
+					</div>
+
+					<div class="setting-item">
+						<label for="noiseReduction">
+							Noise Reduction
+							<span style="font-size: 11px; color: var(--text-secondary);">(Higher for noisy signals)</span>
+						</label>
+						<input type="range" id="noiseReduction" min="0" max="10" step="1" value="5">
+						<div class="value-display"><span id="noiseReductionValue">5</span></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="card-title">Decoder Output</div>
+
+			<div class="morse-buffer" id="morseBuffer"></div>
+			<div class="output-container" id="outputText"></div>
+		</div>
+
+		<div class="card">
+			<div class="card-title">Signal Visualizers</div>
+
+			<div class="indicators">
+				<div class="indicator">
+					<div class="indicator-value" id="currentTone">0</div>
+					<div class="indicator-label">Current Tone (Hz)</div>
+				</div>
+
+				<div class="indicator">
+					<div class="indicator-value" id="currentWpm">0</div>
+					<div class="indicator-label">Detected WPM</div>
+				</div>
+
+				<div class="indicator">
+					<div class="indicator-value" id="snr">0</div>
+					<div class="indicator-label">Signal/Noise Ratio</div>
+				</div>
+
+				<div class="indicator">
+					<div class="indicator-value" id="confidence">0%</div>
+					<div class="indicator-label">Decoding Confidence</div>
+				</div>
+			</div>
+
+			<div class="signal-bar">
+				<div class="signal-level" id="signalLevel"></div>
+				<div class="threshold-marker" id="thresholdMarker"></div>
+			</div>
+
+			<div class="visualizers">
+				<div>
+					<div class="card-title">
+						Waveform
+						<div class="tone-indicator" id="toneIndicator"></div>
+					</div>
+					<canvas id="waveformCanvas" height="150"></canvas>
+				</div>
+
+				<div>
+					<div class="card-title">Frequency Spectrum</div>
+					<canvas id="spectrumCanvas" height="150"></canvas>
+				</div>
+			</div>
+		</div>
+
+		<div class="status-bar">
+			<span id="statusMessage">Ready to decode.</span>
+			<span id="timingInfo">Dot: 0ms, Dash: 0ms, Space: 0ms</span>
+		</div>
+	</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			// DOM Elements
+			const startBtn = document.getElementById('startBtn');
+			const stopBtn = document.getElementById('stopBtn');
+			const clearBtn = document.getElementById('clearBtn');
+			const statusDot = document.getElementById('statusDot');
+			const waveformCanvas = document.getElementById('waveformCanvas');
+			const spectrumCanvas = document.getElementById('spectrumCanvas');
+			const outputText = document.getElementById('outputText');
+			const morseBuffer = document.getElementById('morseBuffer');
+			const currentToneElement = document.getElementById('currentTone');
+			const currentWpmElement = document.getElementById('currentWpm');
+			const snrElement = document.getElementById('snr');
+			const confidenceElement = document.getElementById('confidence');
+			const signalLevel = document.getElementById('signalLevel');
+			const thresholdMarker = document.getElementById('thresholdMarker');
+			const statusMessage = document.getElementById('statusMessage');
+			const timingInfo = document.getElementById('timingInfo');
+			const toneIndicator = document.getElementById('toneIndicator');
+
+			// Input elements
+			const toneFrequencyInput = document.getElementById('toneFrequency');
+			const toneFrequencyValue = document.getElementById('toneFrequencyValue');
+			const wpmRangeInput = document.getElementById('wpmRange');
+			const wpmValue = document.getElementById('wpmValue');
+			const thresholdLevelInput = document.getElementById('thresholdLevel');
+			const thresholdValue = document.getElementById('thresholdValue');
+			const noiseReductionInput = document.getElementById('noiseReduction');
+			const noiseReductionValue = document.getElementById('noiseReductionValue');
+
+			// Audio processing variables
+			let audioContext = null;
+			let analyzer = null;
+			let stream = null;
+			let animationFrame = null;
+			let isListening = false;
+
+			// Morse decoding variables
+			let preferredTone = 700;
+			let wpm = 20;
+			let thresholdLevel = 0.10;
+			let noiseReduction = 5;
+			let dotDuration = 1200 / wpm; // milliseconds
+			let dashDuration = dotDuration * 3;
+			let elementSpaceDuration = dotDuration;
+			let letterSpaceDuration = dotDuration * 3;
+			let wordSpaceDuration = dotDuration * 7;
+
+			let currentMorseSequence = '';
+			let lastSignalEndTime = 0;
+			let signalStartTime = 0;
+			let isSignalOn = false;
+			let adaptiveThreshold = thresholdLevel;
+			let noiseFloor = 0;
+			let peakLevel = 0;
+			let snrValue = 0;
+			let confidenceValue = 0;
+
+			// Arrays to store timing data for adaptive calculations
+			let dotLengths = [];
+			let dashLengths = [];
+			let spaceLengths = [];
+
+			// Morse code mapping
+			const morseCodeMap = {
+				'.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E',
+				'..-.': 'F', '--.': 'G', '....': 'H', '..': 'I', '.---': 'J',
+				'-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O',
+				'.--.': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
+				'..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y',
+				'--..': 'Z', '.----': '1', '..---': '2', '...--': '3', '....-': '4',
+				'.....': '5', '-....': '6', '--...': '7', '---..': '8', '----.': '9',
+				'-----': '0', '--..--': ',', '.-.-.-': '.', '..--..': '?',
+				'-..-.': '/', '-.--.': '(', '-.--.-': ')', '.-...': '&',
+				'---...': ':', '-.-.-.': ';', '-...-': '=', '.-.-.': '+',
+				'-....-': '-', '..--.-': '_', '.-..-.': '"', '...-..-': '$',
+				'.--.-.': '@', '.-.-.': '+', '.-.-': 'Ä', '---.': 'Ö', '..--': 'Ü',
+				'...-.-': '<SK>', '-.-.-': '<KA>'
+			};
+
+			// Event listeners for controls
+			startBtn.addEventListener('click', startDecoding);
+			stopBtn.addEventListener('click', stopDecoding);
+			clearBtn.addEventListener('click', clearOutput);
+
+			// Event listeners for settings
+			toneFrequencyInput.addEventListener('input', updateToneFrequency);
+			wpmRangeInput.addEventListener('input', updateWPM);
+			thresholdLevelInput.addEventListener('input', updateThreshold);
+			noiseReductionInput.addEventListener('input', updateNoiseReduction);
+
+			// Initialize settings display
+			updateToneFrequency();
+			updateWPM();
+			updateThreshold();
+			updateNoiseReduction();
+
+			// Set recommended default threshold
+			thresholdLevelInput.value = 0.10;
+			thresholdLevel = 0.10;
+			adaptiveThreshold = 0.10;
+			thresholdValue.textContent = "0.10";
+
+			// Canvas setup
+			const waveformCtx = waveformCanvas.getContext('2d');
+			const spectrumCtx = spectrumCanvas.getContext('2d');
+
+			// Update the display for the tone frequency
+			function updateToneFrequency() {
+				preferredTone = parseInt(toneFrequencyInput.value, 10);
+				toneFrequencyValue.textContent = preferredTone;
+				updateTimingValues();
+			}
+
+			// Update the display for WPM
+			function updateWPM() {
+				wpm = parseInt(wpmRangeInput.value, 10);
+				wpmValue.textContent = wpm;
+				currentWpmElement.textContent = wpm; // Also update the detected WPM display
+
+				// Clear timing arrays when manually changing speed
+				dotLengths = [];
+				dashLengths = [];
+				spaceLengths = [];
+
+				updateTimingValues();
+			}
+
+			// Update timing values based on WPM
+			function updateTimingValues() {
+				dotDuration = 1200 / wpm; // milliseconds
+				dashDuration = dotDuration * 3;
+				elementSpaceDuration = dotDuration;
+				letterSpaceDuration = dotDuration * 3;
+				wordSpaceDuration = dotDuration * 7;
+
+				timingInfo.textContent = `Dot: ${Math.round(dotDuration)}ms, Dash: ${Math.round(dashDuration)}ms, Space: ${Math.round(letterSpaceDuration)}ms`;
+			}
+
+			// Update the threshold level
+			function updateThreshold() {
+				thresholdLevel = parseFloat(thresholdLevelInput.value);
+				thresholdValue.textContent = thresholdLevel.toFixed(2);
+				adaptiveThreshold = thresholdLevel;
+
+				// Update the threshold marker
+				thresholdMarker.style.left = `${thresholdLevel * 100}%`;
+			}
+
+			// Update noise reduction level
+			function updateNoiseReduction() {
+				noiseReduction = parseInt(noiseReductionInput.value, 10);
+				noiseReductionValue.textContent = noiseReduction;
+			}
+
+			// Clear the output display
+			function clearOutput() {
+				outputText.textContent = '';
+				morseBuffer.textContent = '';
+				currentMorseSequence = '';
+			}
+
+			// Start the decoding process
+			async function startDecoding() {
+				try {
+					// Create audio context
+					audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+					// Get microphone stream
+					stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+					// Create analyzer with smaller buffer for faster response at high speeds
+					const source = audioContext.createMediaStreamSource(stream);
+					analyzer = audioContext.createAnalyser();
+					analyzer.fftSize = 512; // Reduced from 2048 to improve responsiveness
+					analyzer.smoothingTimeConstant = 0.3; // Moderate smoothing
+					source.connect(analyzer);
+
+					// Update UI
+					startBtn.disabled = true;
+					stopBtn.disabled = false;
+					statusDot.classList.remove('off');
+					statusDot.classList.add('on');
+					isListening = true;
+					statusMessage.textContent = 'Decoding in progress... (Auto-adjusting to signal)';
+
+					// Start processing audio
+					processAudio();
+				} catch (error) {
+					console.error('Error accessing microphone:', error);
+					statusMessage.textContent = `Error: ${error.message}`;
+				}
+			}
+
+			// Stop the decoding process
+			function stopDecoding() {
+				if (animationFrame) {
+					cancelAnimationFrame(animationFrame);
+					animationFrame = null;
+				}
+
+				if (stream) {
+					stream.getTracks().forEach(track => track.stop());
+					stream = null;
+				}
+
+				if (audioContext) {
+					audioContext.close();
+					audioContext = null;
+				}
+
+				// Update UI
+				startBtn.disabled = false;
+				stopBtn.disabled = true;
+				statusDot.classList.remove('on');
+				statusDot.classList.add('off');
+				isListening = false;
+				statusMessage.textContent = 'Decoding stopped.';
+			}
+
+			// Implement the Goertzel algorithm for tone detection
+			function goertzelDetect(buffer, sampleRate, targetFrequency) {
+				const bufferSize = buffer.length;
+				const omega = 2.0 * Math.PI * targetFrequency / sampleRate;
+				const sine = Math.sin(omega);
+				const cosine = Math.cos(omega);
+				const coeff = 2.0 * cosine;
+
+				let q1 = 0;
+				let q2 = 0;
+
+				// Use only a portion of the buffer for faster response at high speeds
+				const effectiveBufferSize = Math.min(bufferSize, 512);
+				const step = Math.floor(bufferSize / effectiveBufferSize) || 1;
+
+				for (let i = 0; i < bufferSize; i += step) {
+					// Normalize the value from 0-255 to -1 to 1
+					const normalized = (buffer[i] / 128.0) - 1.0;
+					const q0 = coeff * q1 - q2 + normalized;
+					q2 = q1;
+					q1 = q0;
+				}
+
+				const real = q1 - q2 * cosine;
+				const imag = q2 * sine;
+
+				return Math.sqrt(real*real + imag*imag) / (effectiveBufferSize/2);
+			}
+
+			// Process audio data from the microphone
+			function processAudio() {
+				if (!analyzer || !audioContext) return;
+
+				const bufferLength = analyzer.frequencyBinCount;
+				const timeData = new Uint8Array(bufferLength);
+				const frequencyData = new Uint8Array(bufferLength);
+
+				analyzer.getByteTimeDomainData(timeData);
+				analyzer.getByteFrequencyData(frequencyData);
+
+				// Draw waveform
+				drawWaveform(timeData);
+
+				// Draw frequency spectrum
+				drawSpectrum(frequencyData);
+
+				// Find the dominant frequency using Goertzel across a wider range
+				const sampleRate = audioContext.sampleRate;
+
+				// Calculate signal strength across the full 500-900 Hz range
+				let maxStrength = 0;
+				let dominantFrequency = 0;
+
+				// Use Goertzel to scan the entire 500-900 Hz range
+				for (let freq = 500; freq <= 900; freq += 20) {	// Step by 20Hz for faster scanning
+					const strength = goertzelDetect(timeData, sampleRate, freq);
+					if (strength > maxStrength) {
+						maxStrength = strength;
+						dominantFrequency = freq;
+					}
+				}
+
+				// Also check for noise outside the target range
+				let noiseStrength = 0;
+				for (let freq = 300; freq < 1200; freq += 150) {	// Larger steps for noise checking
+					if (freq < 500 || freq > 900) {
+						noiseStrength = Math.max(noiseStrength, goertzelDetect(timeData, sampleRate, freq));
+					}
+				}
+
+				// Update noise floor and peak values with smoothing
+				noiseFloor = noiseFloor * 0.95 + noiseStrength * 0.05;
+				peakLevel = Math.max(peakLevel * 0.95, maxStrength);
+
+				// Calculate SNR
+				snrValue = noiseFloor > 0 ? maxStrength / noiseFloor : 0;
+				snrElement.textContent = snrValue.toFixed(1);
+
+				// Apply adaptive threshold based on signal to noise ratio
+				adaptiveThreshold = Math.max(thresholdLevel, noiseFloor * (2 + noiseReduction * 0.5));
+
+				// Calculate confidence
+				confidenceValue = Math.min(100, Math.round((snrValue / 5) * 100));
+				confidenceElement.textContent = `${confidenceValue}%`;
+
+				// Update UI with current tone
+				currentToneElement.textContent = Math.round(dominantFrequency);
+
+				// Auto-adjust preferred tone if consistently detecting a different frequency
+				if (dominantFrequency > 0 && maxStrength > adaptiveThreshold * 2) {
+					// Slowly adjust the preferred tone toward the detected tone
+					preferredTone = preferredTone * 0.95 + dominantFrequency * 0.05;
+					// Ensure it stays within 500-900 Hz range
+					preferredTone = Math.max(500, Math.min(900, preferredTone));
+					// Update the slider and display
+					toneFrequencyInput.value = Math.round(preferredTone);
+					toneFrequencyValue.textContent = Math.round(preferredTone);
+				}
+
+				// Update signal level visualization
+				const levelPercentage = (maxStrength / (adaptiveThreshold * 2)) * 100;
+				signalLevel.style.width = `${Math.min(100, levelPercentage)}%`;
+
+				// Tone match indicator
+				if (maxStrength > adaptiveThreshold) {
+					toneIndicator.classList.add('tone-match');
+				} else {
+					toneIndicator.classList.remove('tone-match');
+				}
+
+				// Morse code detection logic
+				const now = Date.now();
+
+				// Keep track of signal durations and spaces for WPM calculation
+				let wordSpaceDetected = false;
+
+				// Detect signal state change
+				if (maxStrength > adaptiveThreshold && !isSignalOn) {
+					// Signal just turned on
+					isSignalOn = true;
+					signalStartTime = now;
+
+					// Check if this is a new character or word
+					const silenceDuration = now - lastSignalEndTime;
+
+					if (lastSignalEndTime > 0) {
+						// Store space duration for adaptive timing
+						if (silenceDuration > 10) {	// Ignore very short transitions
+							spaceLengths.push(silenceDuration);
+						}
+
+						// Handle character and word spaces
+						if (silenceDuration > letterSpaceDuration * 0.75 &&
+								silenceDuration < wordSpaceDuration * 0.75 &&
+								currentMorseSequence.length > 0) {
+							// End of a character
+							decodeMorse(currentMorseSequence);
+							currentMorseSequence = '';
+						} else if (silenceDuration >= wordSpaceDuration * 0.75) {
+							// End of a word - add space if needed
+							if (currentMorseSequence.length > 0) {
+								decodeMorse(currentMorseSequence);
+								currentMorseSequence = '';
+							}
+							// Add space between words
+							outputText.textContent += ' ';
+							wordSpaceDetected = true;
+						}
+					}
+				} else if (maxStrength <= adaptiveThreshold && isSignalOn) {
+					// Signal just turned off
+					isSignalOn = false;
+					const signalDuration = now - signalStartTime;
+					lastSignalEndTime = now;
+
+					// Only process signals longer than noise threshold
+					if (signalDuration > 10) {	// Ignore very short transitions
+						// Store signal duration for adaptive timing and determine if dot or dash
+						if (signalDuration < dashDuration * 0.6) {
+							dotLengths.push(signalDuration);
+							currentMorseSequence += '.';
+
+							// Immediate WPM calculation from each dot
+							// This ensures immediate feedback on speed changes
+							const detectedWpm = Math.round(1200 / signalDuration);
+							if (detectedWpm >= 12 && detectedWpm <= 40) {
+								// Update display immediately
+								currentWpmElement.textContent = detectedWpm;
+
+								// Update actual WPM value with smoothing to avoid jumpiness
+								wpm = Math.round(wpm * 0.7 + detectedWpm * 0.3);
+								wpmRangeInput.value = wpm;
+								wpmValue.textContent = wpm;
+
+								// Update timing values
+								updateTimingValues();
+							}
+						} else {
+							dashLengths.push(signalDuration);
+							currentMorseSequence += '-';
+						}
+
+						// Update morse buffer display
+						morseBuffer.textContent = currentMorseSequence;
+					}
+				}
+
+				// Handle extended silence - adds reliability for last character
+				if (!isSignalOn && lastSignalEndTime > 0 && (now - lastSignalEndTime) > letterSpaceDuration * 1.2) {
+					// End current character if there is one
+					if (currentMorseSequence.length > 0) {
+						decodeMorse(currentMorseSequence);
+						currentMorseSequence = '';
+
+						// Check for word space after additional time
+						if ((now - lastSignalEndTime) > wordSpaceDuration && !wordSpaceDetected) {
+							outputText.textContent += ' ';
+							wordSpaceDetected = true;
+						}
+					}
+				}
+
+				// Limit buffer sizes to avoid lag
+				if (dotLengths.length > 5) dotLengths.splice(0, dotLengths.length - 5);
+				if (dashLengths.length > 5) dashLengths.splice(0, dashLengths.length - 5);
+				if (spaceLengths.length > 5) spaceLengths.splice(0, spaceLengths.length - 5);
+
+				// Continue the processing loop
+				animationFrame = requestAnimationFrame(processAudio);
+			}
+
+			// Draw the waveform on canvas
+			function drawWaveform(timeData) {
+				const width = waveformCanvas.width;
+				const height = waveformCanvas.height;
+
+				waveformCtx.clearRect(0, 0, width, height);
+				waveformCtx.lineWidth = 2;
+				waveformCtx.strokeStyle = '#1a73e8';
+				waveformCtx.beginPath();
+
+				const sliceWidth = width / timeData.length;
+				let x = 0;
+
+				for (let i = 0; i < timeData.length; i++) {
+					const v = timeData[i] / 128.0;
+					const y = v * height / 2;
+
+					if (i === 0) {
+						waveformCtx.moveTo(x, y);
+					} else {
+						waveformCtx.lineTo(x, y);
+					}
+
+					x += sliceWidth;
+				}
+
+				waveformCtx.stroke();
+
+				// Draw threshold line
+				waveformCtx.beginPath();
+				waveformCtx.strokeStyle = '#ea4335';
+				waveformCtx.setLineDash([5, 5]);
+				const thresholdY = (128 * (1 + adaptiveThreshold)) / 128.0 * height / 2;
+				waveformCtx.moveTo(0, thresholdY);
+				waveformCtx.lineTo(width, thresholdY);
+				waveformCtx.stroke();
+				waveformCtx.setLineDash([]);
+			}
+
+			// Draw the frequency spectrum on canvas
+			function drawSpectrum(frequencyData) {
+				const width = spectrumCanvas.width;
+				const height = spectrumCanvas.height;
+
+				spectrumCtx.clearRect(0, 0, width, height);
+
+				// Plot only the relevant part of the spectrum (400-1000 Hz)
+				const minFreq = 400;
+				const maxFreq = 1000;
+				const sampleRate = audioContext ? audioContext.sampleRate : 44100;
+				const minBin = Math.floor(minFreq * frequencyData.length / (sampleRate / 2));
+				const maxBin = Math.ceil(maxFreq * frequencyData.length / (sampleRate / 2));
+				const binCount = maxBin - minBin;
+
+				// Skip some bins for faster rendering
+				const skipFactor = Math.ceil(binCount / 100) || 1;
+				const barWidth = width / (binCount / skipFactor);
+				const multiplier = height / 255;
+
+				for (let i = 0; i < binCount; i += skipFactor) {
+					const binFreq = minFreq + (i / binCount) * (maxFreq - minFreq);
+					const barHeight = frequencyData[minBin + i] * multiplier;
+					const x = (i / skipFactor) * barWidth;
+					const y = height - barHeight;
+
+					// Highlight the target frequency range
+					if (binFreq >= preferredTone - 30 && binFreq <= preferredTone + 30) {
+						spectrumCtx.fillStyle = '#ea4335';
+					} else {
+						spectrumCtx.fillStyle = '#34a853';
+					}
+
+					spectrumCtx.fillRect(x, y, barWidth - 1, barHeight);
+				}
+
+				// Draw preferred tone marker
+				const preferredX = ((preferredTone - minFreq) / (maxFreq - minFreq)) * width;
+				spectrumCtx.strokeStyle = '#1a73e8';
+				spectrumCtx.lineWidth = 2;
+				spectrumCtx.beginPath();
+				spectrumCtx.moveTo(preferredX, 0);
+				spectrumCtx.lineTo(preferredX, height);
+				spectrumCtx.stroke();
+			}
+
+			// Decode Morse code sequence to text
+			function decodeMorse(sequence) {
+				if (sequence.length === 0) return;
+
+				const character = morseCodeMap[sequence] || '?';
+				outputText.textContent += character;
+
+				// Log the decoded character and its Morse code
+				console.log(`Decoded: ${sequence} → ${character}`);
+
+				// Auto-scroll to bottom
+				outputText.scrollTop = outputText.scrollHeight;
+
+				// Flash the character briefly to provide visual feedback
+				outputText.classList.add('flash');
+				setTimeout(() => outputText.classList.remove('flash'), 100);
+			}
+
+			// Resize canvas elements when window resizes
+			function resizeCanvases() {
+				// Set canvas dimensions to match their display size
+				waveformCanvas.width = waveformCanvas.clientWidth;
+				waveformCanvas.height = waveformCanvas.clientHeight;
+				spectrumCanvas.width = spectrumCanvas.clientWidth;
+				spectrumCanvas.height = spectrumCanvas.clientHeight;
+			}
+
+			// Initial resize and add window resize listener
+			resizeCanvases();
+			window.addEventListener('resize', resizeCanvases);
+
+			// Add keyboard shortcuts
+			document.addEventListener('keydown', function(e) {
+				// Space bar to start/stop
+				if (e.code === 'Space' && !e.repeat) {
+					e.preventDefault();
+					if (isListening) {
+						stopBtn.click();
+					} else {
+						startBtn.click();
+					}
+				}
+				// 'C' key to clear output
+				else if (e.code === 'KeyC' && (e.ctrlKey || e.metaKey)) {
+					e.preventDefault();
+					clearBtn.click();
+				}
+			});
+
+			// Add a function to detect interruptions in audio stream
+			function detectAudioStreamInterruption() {
+				if (isListening && audioContext && audioContext.state !== 'running') {
+					statusMessage.textContent = 'Audio context interrupted. Attempting to resume...';
+					audioContext.resume().then(() => {
+						statusMessage.textContent = 'Decoding resumed.';
+					}).catch(err => {
+						statusMessage.textContent = `Error resuming audio: ${err.message}`;
+						stopDecoding();
+					});
+				}
+			}
+
+			// Check for audio interruptions periodically
+			setInterval(detectAudioStreamInterruption, 2000);
+
+			// Display initial status message
+			statusMessage.textContent = 'Ready to decode. Press Start or spacebar to begin.';
+		});
+	</script>
+</body>
+</html>
